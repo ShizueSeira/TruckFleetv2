@@ -1,5 +1,5 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
-<%@ page import="Models.truck_fleet, java.util.List, Models.users" %>
+<%@ page import="Models.truck_fleet, java.util.List, Models.users, java.util.HashSet, java.util.Set" %>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -73,6 +73,72 @@
                         editModal.style.display = "none";
                     }
                 });
+
+                // Plate Number Filter
+                const plateNumberSearch = document.getElementById("plateNumberSearch");
+                const engineModelSearch = document.getElementById("engineModelSearch");
+                const makeFilter = document.getElementById("makeFilter"); // Third filter for Make
+                const modelFilter = document.getElementById("modelFilter"); // Fourth filter for Model
+                const truckRows = document.querySelectorAll(".itemlist tr");
+
+                plateNumberSearch.addEventListener("input", function () {
+                    const searchTerm = plateNumberSearch.value.trim().toLowerCase();
+
+                    truckRows.forEach(row => {
+                        const plateNumber = row.querySelector("td:nth-child(1)").textContent.toLowerCase();
+
+                        if (plateNumber.includes(searchTerm)) {
+                            row.style.display = ""; // Show the row
+                        } else {
+                            row.style.display = "none"; // Hide the row
+                        }
+                    });
+                });
+
+                // Engine Model Filter
+                engineModelSearch.addEventListener("input", function () {
+                    const searchTerm = engineModelSearch.value.trim().toLowerCase();
+
+                    truckRows.forEach(row => {
+                        const engineModel = row.querySelector("td:nth-child(4)").textContent.toLowerCase();
+
+                        if (engineModel.includes(searchTerm)) {
+                            row.style.display = ""; // Show the row
+                        } else {
+                            row.style.display = "none"; // Hide the row
+                        }
+                    });
+                });
+
+                // Make Filter (Third Filter)
+                makeFilter.addEventListener("change", function () {
+                    const selectedMake = makeFilter.value.toLowerCase();
+
+                    truckRows.forEach(row => {
+                        const make = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
+
+                        if (selectedMake === "" || make === selectedMake) {
+                            row.style.display = ""; // Show the row
+                        } else {
+                            row.style.display = "none"; // Hide the row
+                        }
+                    });
+                });
+
+                // Model Filter (Fourth Filter)
+                modelFilter.addEventListener("change", function () {
+                    const selectedModel = modelFilter.value.toLowerCase();
+
+                    truckRows.forEach(row => {
+                        const model = row.querySelector("td:nth-child(3)").textContent.toLowerCase();
+
+                        if (selectedModel === "" || model === selectedModel) {
+                            row.style.display = ""; // Show the row
+                        } else {
+                            row.style.display = "none"; // Hide the row
+                        }
+                    });
+                });
             });
         </script>
     </head>
@@ -102,6 +168,16 @@
                 out.println("<p style='color: red;'>" + errorMessage + "</p>");
                 session.removeAttribute("errorMessage"); // Clear the error message after displaying it
             }
+
+            // Get unique values for Make and Model
+            Set<String> uniqueMakes = new HashSet<String>(); // Explicit generic type
+            Set<String> uniqueModels = new HashSet<String>(); // Explicit generic type
+            if (trucks != null && !trucks.isEmpty()) {
+                for (truck_fleet truck : trucks) {
+                    uniqueMakes.add(truck.getTruckManufacturer());
+                    uniqueModels.add(truck.getTruckModel());
+                }
+            }
         %>
 
         <header>
@@ -122,16 +198,36 @@
                 <div class="filtering">
                     <div class="filter-option">
                         <h3 class="filtering-desc">Search Plate Number:</h3>
-                        <input type="text" class="filter-search">
+                        <input type="text" id="plateNumberSearch" class="filter-search" placeholder="Enter Plate Number">
                     </div>
                     <div class="filter-option">
                         <h3 class="filtering-desc">Search Engine Model:</h3>
-                        <input type="text" class="filter-search">
+                        <input type="text" id="engineModelSearch" class="filter-search" placeholder="Enter Engine Model">
                     </div>
                     <div class="filter-option">
-                        <h3 class="filtering-desc">Select Make & Model:</h3>
-                        <select type="text" class="filter-select">
-                            <!-- Populate this dropdown if needed -->
+                        <h3 class="filtering-desc">Filter by Make:</h3>
+                        <select id="makeFilter" class="filter-select">
+                            <option value="">All Makes</option>
+                            <%
+                                for (String make : uniqueMakes) {
+                            %>
+                            <option value="<%= make %>"><%= make %></option>
+                            <%
+                                }
+                            %>
+                        </select>
+                    </div>
+                    <div class="filter-option">
+                        <h3 class="filtering-desc">Filter by Model:</h3>
+                        <select id="modelFilter" class="filter-select">
+                            <option value="">All Models</option>
+                            <%
+                                for (String model : uniqueModels) {
+                            %>
+                            <option value="<%= model %>"><%= model %></option>
+                            <%
+                                }
+                            %>
                         </select>
                     </div>
                 </div>
@@ -141,14 +237,14 @@
                     <table class="gen-table">
                         <thead>
                             <tr>
-                                <th class="gen-columnname">Plate Number</th>
-                                <th class="gen-columnname">Make</th>
-                                <th class="gen-columnname">Model</th>
-                                <th class="gen-columnname">Engine</th>
-                                <th class="gen-columnname">Manufacturer Year</th>
-                                <th class="gen-columnname">Last Maintenance</th>
-                                <th class="gen-columnname">Next Maintenance</th>
-                                <th class="gen-columnname">Actions</th> <!-- New column for actions -->
+                                <th class="gen-columnname">Plate Number</th> <!-- Index 1 -->
+                                <th class="gen-columnname">Make</th> <!-- Index 2 -->
+                                <th class="gen-columnname">Model</th> <!-- Index 3 -->
+                                <th class="gen-columnname">Engine</th> <!-- Index 4 -->
+                                <th class="gen-columnname">Manufacturer Year</th> <!-- Index 5 -->
+                                <th class="gen-columnname">Last Maintenance</th> <!-- Index 6 -->
+                                <th class="gen-columnname">Next Maintenance</th> <!-- Index 7 -->
+                                <th class="gen-columnname">Actions</th> <!-- Not filtered -->
                             </tr>
                         </thead>
                         <tbody class="itemlist">
@@ -157,31 +253,21 @@
                                     for (truck_fleet truck : trucks) {
                             %>
                             <tr>
-                                <td><%= truck.getTruckLicensePlate() %></td>
-                                <td><%= truck.getTruckManufacturer() %></td>
-                                <td><%= truck.getTruckEngine() %></td>
-                                <td><%= truck.getTruckModel() %></td>
-                                <td><%= truck.getTruckManufacturerYear() %></td>
-                                <td><%= truck.getTruckLastMaintenance() %></td>
-                                <td><%= truck.getTruckNextMaintenance() %></td>
+                                <td><%= truck.getTruckLicensePlate() %></td> <!-- Index 1 -->
+                                <td><%= truck.getTruckManufacturer() %></td> <!-- Index 2 -->
+                                <td><%= truck.getTruckModel() %></td> <!-- Index 3 -->
+                                <td><%= truck.getTruckEngine() %></td> <!-- Index 4 -->
+                                <td><%= truck.getTruckManufacturerYear() %></td> <!-- Index 5 -->
+                                <td><%= truck.getTruckLastMaintenance() %></td> <!-- Index 6 -->
+                                <td><%= truck.getTruckNextMaintenance() %></td> <!-- Index 7 -->
                                 <td>
-                                    <!-- Pencil icon for editing -->
-                                    <a href="#" class="edit-truck"
-                                       data-truck-id="<%= truck.getTruckId() %>"
-                                       data-truck-model="<%= truck.getTruckModel() %>"
-                                       data-truck-engine="<%= truck.getTruckEngine() %>"
-                                       data-truck-licenseplate="<%= truck.getTruckLicensePlate() %>"
-                                       data-truck-manufacturer="<%= truck.getTruckManufacturer() %>"
-                                       data-truck-manufactureryear="<%= truck.getTruckManufacturerYear() %>"
-                                       data-truck-lastmaintenance="<%= truck.getTruckLastMaintenance() %>"
-                                       data-truck-nextmaintenance="<%= truck.getTruckNextMaintenance() %>">
-                                        <i class="fas fa-pencil-alt"></i> <!-- Font Awesome pencil icon -->
+                                    <!-- Actions column (not filtered) -->
+                                    <a href="#" class="edit-truck" data-truck-id="<%= truck.getTruckId() %>">
+                                        <i class="fas fa-pencil-alt"></i>
                                     </a>
-                                    &nbsp; <!-- Add space between icons -->
-                                    <!-- Trash can icon for deletion -->
                                     <a href="DeleteTruckServlet?licensePlate=<%= truck.getTruckLicensePlate() %>" 
                                        onclick="return confirm('Are you sure you want to delete this truck?');">
-                                        <i class="fas fa-trash"></i> <!-- Font Awesome trash can icon -->
+                                        <i class="fas fa-trash"></i>
                                     </a>
                                 </td>
                             </tr>
@@ -250,44 +336,44 @@
             </div>
         </div>
 
-      <!-- Edit Truck Modal -->
-<div id="editModal" class="add-modal"> <!-- Use the same class as the Add Truck Modal -->
-    <div class="addmodal-box">
-        <div class="addmodal-content">
-            <span class="close edit-close">&times;</span> <!-- Use the same close button class -->
-            <h1 style="color: #5271ff;">Edit Truck</h1>
-            
-            <!-- Form to submit updated truck details -->
-            <form id="editTruckForm" action="EditTruckServlet" method="POST">
-                <input type="hidden" id="editTruckId" name="truckId">
-                
-                <div class="add-details-textbox"> <!-- Use the same class as the Add Truck Modal -->
-                    <label class="option-label">Truck Model</label>
-                    <input type="text" id="editTruckModel" name="truckModel" class="item-options" placeholder="Enter Truck Model" required>
+        <!-- Edit Truck Modal -->
+        <div id="editModal" class="add-modal">
+            <div class="addmodal-box">
+                <div class="addmodal-content">
+                    <span class="close edit-close">&times;</span>
+                    <h1 style="color: #5271ff;">Edit Truck</h1>
+                    
+                    <!-- Form to submit updated truck details -->
+                    <form id="editTruckForm" action="EditTruckServlet" method="POST">
+                        <input type="hidden" id="editTruckId" name="truckId">
+                        
+                        <div class="add-details-textbox">
+                            <label class="option-label">Truck Model</label>
+                            <input type="text" id="editTruckModel" name="truckModel" class="item-options" placeholder="Enter Truck Model" required>
 
-                    <label class="option-label">Truck Engine</label>
-                    <input type="text" id="editTruckEngine" name="truckEngine" class="item-options" placeholder="Enter Truck Engine" required>
+                            <label class="option-label">Truck Engine</label>
+                            <input type="text" id="editTruckEngine" name="truckEngine" class="item-options" placeholder="Enter Truck Engine" required>
 
-                    <label class="option-label">License Plate</label>
-                    <input type="text" id="editTruckLicensePlate" name="truckLicensePlate" class="item-options" placeholder="Enter License Plate" required>
+                            <label class="option-label">License Plate</label>
+                            <input type="text" id="editTruckLicensePlate" name="truckLicensePlate" class="item-options" placeholder="Enter License Plate" required>
 
-                    <label class="option-label">Truck Manufacturer</label>
-                    <input type="text" id="editTruckManufacturer" name="truckManufacturer" class="item-options" placeholder="Enter Truck Manufacturer" required>
+                            <label class="option-label">Truck Manufacturer</label>
+                            <input type="text" id="editTruckManufacturer" name="truckManufacturer" class="item-options" placeholder="Enter Truck Manufacturer" required>
 
-                    <label class="option-label">Manufacturer Year</label>
-                    <input type="number" id="editTruckManufacturerYear" name="truckManufacturerYear" class="item-options" placeholder="Enter Manufacturer Year" required>
+                            <label class="option-label">Manufacturer Year</label>
+                            <input type="number" id="editTruckManufacturerYear" name="truckManufacturerYear" class="item-options" placeholder="Enter Manufacturer Year" required>
 
-                    <label class="option-label">Last Maintenance Date</label>
-                    <input type="date" id="editTruckLastMaintenance" name="truckLastMaintenance" class="item-options" required>
+                            <label class="option-label">Last Maintenance Date</label>
+                            <input type="date" id="editTruckLastMaintenance" name="truckLastMaintenance" class="item-options" required>
 
-                    <label class="option-label">Next Maintenance Date</label>
-                    <input type="date" id="editTruckNextMaintenance" name="truckNextMaintenance" class="item-options" required>
+                            <label class="option-label">Next Maintenance Date</label>
+                            <input type="date" id="editTruckNextMaintenance" name="truckNextMaintenance" class="item-options" required>
+                        </div>
+
+                        <button type="submit" id="editButton" class="addbutton">Save Changes</button>
+                    </form>
                 </div>
-
-                <button type="submit" id="editButton" class="addbutton">Save Changes</button> <!-- Use the same button class as the Add Truck Modal -->
-            </form>
+            </div>
         </div>
-    </div>
-</div>
     </body>
 </html>
